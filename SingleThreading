@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+from socket import *
+import sys  # In order to terminate the program
+
+# Create a TCP server socket (AF_INET is used for IPv4, SOCK_STREAM for TCP)
+serverSocket = socket(AF_INET, SOCK_STREAM)
+
+# Prepare a server socket
+# Fill in start
+serverPort = 6789  # You can change this port if needed
+serverSocket.bind(('', serverPort))  # Bind to all available interfaces
+serverSocket.listen(1)  # Max 1 connection at a time
+# Fill in end
+
+while True:
+    # Establish the connection
+    print('Ready to serve...')
+    connectionSocket, addr = serverSocket.accept()  # Fill in start/end done
+
+    try:
+        # Receive the client request
+        message = connectionSocket.recv(1024).decode()  # Fill in start/end done
+
+        # Extract the requested filename from the HTTP request
+        filename = message.split()[1]
+        f = open(filename[1:])  # remove leading '/'
+
+        # Read the requested file contents
+        outputdata = f.read()  # Fill in start/end done
+
+        # Send one HTTP header line into socket
+        header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"
+        connectionSocket.send(header.encode())  # Fill in start/end done
+
+        # Send the content of the requested file to the client
+        for i in range(0, len(outputdata)):
+            connectionSocket.send(outputdata[i].encode())
+
+        connectionSocket.send("\r\n".encode())
+        connectionSocket.close()
+
+    except IOError:
+        # Send response message for file not found
+        header = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n"
+        connectionSocket.send(header.encode())
+        connectionSocket.send("<html><body><h1>404 Not Found</h1></body></html>".encode())
+
+        # Close client socket
+        connectionSocket.close()
+
+serverSocket.close()
+sys.exit()  # Terminate the program after sending the corresponding data
