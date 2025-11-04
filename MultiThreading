@@ -1,0 +1,69 @@
+from socket import *
+import threading
+import sys
+
+# Function to handle client requests
+def handle_client(connectionSocket):
+    try:
+        # Receive the client request
+        message = connectionSocket.recv(1024).decode()
+        if not message:
+            connectionSocket.close()
+            return
+
+        # Extract the requested filename
+        filename = message.split()[1]
+        f = open(filename[1:])  # remove leading '/'
+        outputdata = f.read()
+
+        # Send HTTP 200 OK header
+        header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"
+        connectionSocket.send(header.encode())
+
+        # Send file contents
+        for i in range(0, len(outputdata)):
+            connectionSocket.send(outputdata[i].encode())
+
+        connectionSocket.send("\r\n".encode())
+        connectionSocket.close()
+
+    except IOError:
+        # Send 404 Not Found response
+        header = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n"
+        connectionSocket.send(header.encode())
+        connectionSocket.send("<html><body><h1>404 Not Found</h1></body></html>".encode())
+        connectionSocket.close()
+
+    except Exception as e:
+        print("Error:", e)
+        connectionSocket.close()
+
+
+def main():
+    # Create server socket
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+    serverPort = 6789  # You can change this if needed
+    serverSocket.bind(('', serverPort))
+    serverSocket.listen(5)  # Allow up to 5 pending connections
+
+    print(f"Multithreaded server running on port {serverPort}...")
+    print("Ready to serve multiple clients simultaneously.\n")
+
+    try:
+        while True:
+            # Accept a new connection
+            connectionSocket, addr = serverSocket.accept()
+            print(f"Connection established with {addr}")
+
+            # Create a new thread for this client
+            client_thread = threading.Thread(target=handle_client, args=(connectionSocket,))
+            client_thread.start()
+
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        serverSocket.close()
+        sys.exit()
+
+
+if __name__ == "__main__":
+    main()
